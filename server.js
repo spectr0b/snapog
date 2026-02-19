@@ -137,19 +137,37 @@ app.get('/svg', (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+// ── Telegram alert helper ─────────────────────────────────────────────────────
+const TG_TOKEN = '8372674797:AAFJLcO2SnT0qVrA3Gi4MvQ4KbNDfH6a-74';
+const TG_CHAT  = '8510001190';
+async function tgAlert(text) {
+  try {
+    const fetch = (await import('node-fetch')).default;
+    await fetch(`https://api.telegram.org/bot${TG_TOKEN}/sendMessage`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chat_id: TG_CHAT, text, parse_mode: 'Markdown' }),
+    });
+  } catch(e) { console.error('TG alert failed:', e.message); }
+}
+
 // ── Waitlist ─────────────────────────────────────────────────────────────────
 
-app.post('/waitlist', (req, res) => {
-  const { email, name } = req.body || {};
+app.post('/waitlist', async (req, res) => {
+  const { email, name, paypal } = req.body || {};
   if (!email?.includes('@')) return res.status(400).json({ error: 'Valid email required' });
 
   const list = readJSON(WAITLIST_FILE, []);
   if (list.find(w => w.email === email)) return res.json({ status: 'already_subscribed', position: list.findIndex(w => w.email === email) + 1 });
 
-  list.push({ email, name: name || '', date: new Date().toISOString(), id: crypto.randomUUID() });
+  const entry = { email, name: name || '', paypal: paypal || '', date: new Date().toISOString(), id: crypto.randomUUID() };
+  list.push(entry);
   writeJSON(WAITLIST_FILE, list);
   console.log(`📧 Waitlist signup: ${email} (#${list.length})`);
-  res.json({ status: 'ok', position: list.length });
+
+  // Notify via Telegram
+  await tgAlert(`🔔 *SnapOG Waitlist Signup #${list.length}*\n📧 ${email}\n👤 ${name || '(no name)'}\n💰 PayPal: ${paypal || '(not provided)'}\n\nIssue key: POST /admin/issue-key\nAdmin secret in server logs`);
+
+  res.json({ status: 'ok', position: list.length, message: 'Check your email — we\'ll send your API key shortly.' });
 });
 
 app.get('/waitlist/count', (req, res) => {

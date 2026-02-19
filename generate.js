@@ -1,10 +1,14 @@
 const { Resvg } = require('@resvg/resvg-js');
 
 const THEMES = {
-  dark: { bg: '#0f0f13', accent: '#6366f1', accentLight: '#818cf8', title: '#f1f5f9', desc: '#94a3b8', tag: '#1e1e2e', tagText: '#818cf8', border: '#1e1e2e', dot: '#6366f1' },
-  light: { bg: '#ffffff', accent: '#4f46e5', accentLight: '#6366f1', title: '#0f172a', desc: '#475569', tag: '#f1f5f9', tagText: '#4f46e5', border: '#e2e8f0', dot: '#4f46e5' },
+  dark:    { bg: '#0f0f13', accent: '#6366f1', accentLight: '#818cf8', title: '#f1f5f9', desc: '#94a3b8', tag: '#1e1e2e', tagText: '#818cf8', border: '#1e1e2e', dot: '#6366f1' },
+  light:   { bg: '#ffffff', accent: '#4f46e5', accentLight: '#6366f1', title: '#0f172a', desc: '#475569', tag: '#f1f5f9', tagText: '#4f46e5', border: '#e2e8f0', dot: '#4f46e5' },
   minimal: { bg: '#fafafa', accent: '#18181b', accentLight: '#3f3f46', title: '#09090b', desc: '#52525b', tag: '#f4f4f5', tagText: '#18181b', border: '#e4e4e7', dot: '#18181b' },
-  ocean: { bg: '#0c1e35', accent: '#0ea5e9', accentLight: '#38bdf8', title: '#f0f9ff', desc: '#7dd3fc', tag: '#0f2942', tagText: '#38bdf8', border: '#1e3a5f', dot: '#0ea5e9' },
+  ocean:   { bg: '#0c1e35', accent: '#0ea5e9', accentLight: '#38bdf8', title: '#f0f9ff', desc: '#7dd3fc', tag: '#0f2942', tagText: '#38bdf8', border: '#1e3a5f', dot: '#0ea5e9' },
+  sunset:  { bg: '#1a0a0a', accent: '#f97316', accentLight: '#fb923c', title: '#fff7ed', desc: '#fed7aa', tag: '#2a1206', tagText: '#fb923c', border: '#3a1a08', dot: '#f97316' },
+  forest:  { bg: '#0a1a0e', accent: '#22c55e', accentLight: '#4ade80', title: '#f0fdf4', desc: '#86efac', tag: '#0e2714', tagText: '#4ade80', border: '#143a1c', dot: '#22c55e' },
+  rose:    { bg: '#1a0a0f', accent: '#f43f5e', accentLight: '#fb7185', title: '#fff1f2', desc: '#fda4af', tag: '#2a0a12', tagText: '#fb7185', border: '#3a0e1c', dot: '#f43f5e' },
+  slate:   { bg: '#020617', accent: '#94a3b8', accentLight: '#cbd5e1', title: '#f8fafc', desc: '#64748b', tag: '#0f172a', tagText: '#94a3b8', border: '#1e293b', dot: '#94a3b8' },
 };
 
 function escape(s) {
