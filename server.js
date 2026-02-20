@@ -201,12 +201,8 @@ app.post('/purchase', async (req, res) => {
 // ── Stripe Checkout ─────────────────────────────────────────────────────────
 
 app.post('/create-checkout-session', async (req, res) => {
-  const { email } = req.body || {};
-  if (!email?.includes('@')) return res.status(400).json({ error: 'Valid email required' });
-
   try {
     const session = await stripe.checkout.sessions.create({
-      customer_email: email,
       payment_method_types: ['card'],
       line_items: [{
         price_data: {
@@ -222,7 +218,8 @@ app.post('/create-checkout-session', async (req, res) => {
       mode: 'payment',
       success_url: `${req.headers.origin || 'http://snapog.46-224-13-144.nip.io'}/success.html?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${req.headers.origin || 'http://snapog.46-224-13-144.nip.io'}/buy.html`,
-      metadata: { email }
+      billing_address_collection: 'auto',
+      customer_email: undefined // Let Stripe collect email
     });
 
     res.json({ url: session.url });
