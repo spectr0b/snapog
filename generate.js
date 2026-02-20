@@ -9,6 +9,9 @@ const THEMES = {
   forest:  { bg: '#0a1a0e', accent: '#22c55e', accentLight: '#4ade80', title: '#f0fdf4', desc: '#86efac', tag: '#0e2714', tagText: '#4ade80', border: '#143a1c', dot: '#22c55e' },
   rose:    { bg: '#1a0a0f', accent: '#f43f5e', accentLight: '#fb7185', title: '#fff1f2', desc: '#fda4af', tag: '#2a0a12', tagText: '#fb7185', border: '#3a0e1c', dot: '#f43f5e' },
   slate:   { bg: '#020617', accent: '#94a3b8', accentLight: '#cbd5e1', title: '#f8fafc', desc: '#64748b', tag: '#0f172a', tagText: '#94a3b8', border: '#1e293b', dot: '#94a3b8' },
+  nord:    { bg: '#2e3440', accent: '#88c0d0', accentLight: '#8fbcbb', title: '#eceff4', desc: '#d8dee9', tag: '#3b4252', tagText: '#88c0d0', border: '#434c5e', dot: '#88c0d0' },
+  neon:    { bg: '#0a0a0f', accent: '#ff00ff', accentLight: '#00ffff', title: '#ffffff', desc: '#ff00ff', tag: '#1a0a1f', tagText: '#00ffff', border: '#2a1a3f', dot: '#ff00ff' },
+  warm:    { bg: '#f5f1ed', accent: '#d97706', accentLight: '#f59e0b', title: '#292524', desc: '#78716c', tag: '#fef3c7', tagText: '#d97706', border: '#e7e5e4', dot: '#d97706' },
 };
 
 function escape(s) {
