@@ -1,9 +1,11 @@
 'use strict';
+require('dotenv').config();
 const express = require('express');
 const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
 const { generateImage, generateSVG, THEMES } = require('./generate');
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 
 const app = express();
 const PORT = process.env.PORT || 3710;
@@ -196,6 +198,40 @@ app.post('/purchase', async (req, res) => {
   res.json({ status: 'ok' });
 });
 
+// ── Stripe Checkout ─────────────────────────────────────────────────────────
+
+app.post('/create-checkout-session', async (req, res) => {
+  const { email } = req.body || {};
+  if (!email?.includes('@')) return res.status(400).json({ error: 'Valid email required' });
+
+  try {
+    const session = await stripe.checkout.sessions.create({
+      customer_email: email,
+      payment_method_types: ['card'],
+      line_items: [{
+        price_data: {
+          currency: 'usd',
+          product_data: {
+            name: 'SnapOG API - Lifetime Access',
+            description: 'Unlimited OG image generation with 11 themes. One-time payment, lifetime access.',
+          },
+          unit_amount: 4900, // $49.00
+        },
+        quantity: 1,
+      }],
+      mode: 'payment',
+      success_url: `${req.headers.origin || 'http://snapog.46-224-13-144.nip.io'}/success.html?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${req.headers.origin || 'http://snapog.46-224-13-144.nip.io'}/buy.html`,
+      metadata: { email }
+    });
+
+    res.json({ url: session.url });
+  } catch (error) {
+    console.error('Stripe checkout error:', error);
+    res.status(500).json({ error: 'Failed to create checkout session' });
+  }
+});
+
 app.get('/waitlist/count', (req, res) => {
   const list = readJSON(WAITLIST_FILE, []);
   res.json({ count: list.length });
@@ -223,6 +259,58 @@ app.post('/webhook/gumroad', express.raw({ type: '*/*' }), (req, res) => {
 
   console.log(`🔑 API key issued: ${newKey} → ${email}`);
   res.json({ status: 'ok', key: newKey });
+});
+
+// Stripe webhook — fires on checkout.session.completed
+app.post('/webhook/stripe', express.raw({ type: 'application/json' }), async (req, res) => {
+  const sig = req.headers['stripe-signature'];
+  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+
+  let event;
+  try {
+    // Verify webhook signature if secret is configured
+    if (webhookSecret) {
+      event = stripe.webhooks.constructEvent(req.body, sig, webhookSecret);
+    } else {
+      event = JSON.parse(req.body.toString());
+    }
+  } catch (err) {
+    console.error('Webhook signature verification failed:', err.message);
+    return res.status(400).send(`Webhook Error: ${err.message}`);
+  }
+
+  // Handle the event
+  if (event.type === 'checkout.session.completed') {
+    const session = event.data.object;
+    const email = session.customer_email || session.metadata?.email;
+    const sessionId = session.id;
+
+    if (!email) {
+      console.error('No email in Stripe session');
+      return res.status(400).json({ error: 'No email in session' });
+    }
+
+    console.log(`💰 Stripe payment: ${email} | session ${sessionId}`);
+
+    // Issue API key
+    const keys = readJSON(KEYS_FILE, {});
+    const newKey = 'sog_' + crypto.randomBytes(20).toString('hex');
+    keys[newKey] = { 
+      email, 
+      created: new Date().toISOString(), 
+      source: 'stripe', 
+      session_id: sessionId,
+      amount: session.amount_total
+    };
+    writeJSON(KEYS_FILE, keys);
+
+    // Notify via Telegram
+    await tgAlert(`💳 *Stripe Payment Received!*\n📧 ${email}\n💰 $${(session.amount_total / 100).toFixed(2)}\n🔑 API key: \`${newKey}\`\n\nFirst revenue! 🎉`);
+
+    console.log(`🔑 API key issued: ${newKey} → ${email}`);
+  }
+
+  res.json({ received: true });
 });
 
 // LemonSqueezy webhook — fires on order_created
