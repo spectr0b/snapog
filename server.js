@@ -170,6 +170,32 @@ app.post('/waitlist', async (req, res) => {
   res.json({ status: 'ok', position: list.length, message: 'Check your email — we\'ll send your API key shortly.' });
 });
 
+// ── Purchase Request ─────────────────────────────────────────────────────────
+
+app.post('/purchase', async (req, res) => {
+  const { email, paymentMethod, website } = req.body || {};
+  if (!email?.includes('@')) return res.status(400).json({ error: 'Valid email required' });
+  if (!paymentMethod) return res.status(400).json({ error: 'Payment method required' });
+
+  const purchases = readJSON('data/purchases.json', []);
+  const entry = { 
+    email, 
+    paymentMethod, 
+    website: website || '', 
+    date: new Date().toISOString(), 
+    id: crypto.randomUUID(),
+    status: 'pending'
+  };
+  purchases.push(entry);
+  writeJSON('data/purchases.json', purchases);
+  console.log(`💰 Purchase request: ${email} via ${paymentMethod}`);
+
+  // Notify via Telegram
+  await tgAlert(`💸 *SnapOG Purchase Request*\n📧 ${email}\n💳 ${paymentMethod}\n🌐 ${website || 'N/A'}\n\nSend payment instructions to customer`);
+
+  res.json({ status: 'ok' });
+});
+
 app.get('/waitlist/count', (req, res) => {
   const list = readJSON(WAITLIST_FILE, []);
   res.json({ count: list.length });
