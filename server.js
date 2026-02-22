@@ -99,6 +99,18 @@ function handleOG(req, res) {
   const ip = (req.headers['x-forwarded-for'] || req.ip || '').split(',')[0].trim();
   const apiKey = req.headers['x-api-key'] || req.headers['authorization']?.replace('Bearer ', '') || req.query.key;
   const isPaid = validateApiKey(apiKey);
+  
+  // Analytics logging
+  const opts = parseOpts(req.method === 'POST' ? req.body : req.query);
+  console.log(JSON.stringify({
+    ts: new Date().toISOString(),
+    title: opts.title?.substring(0, 60),
+    theme: opts.theme,
+    ref: req.get('Referer') || req.get('Referrer') || 'direct',
+    ua: req.get('User-Agent')?.substring(0, 80),
+    ip: ip.substring(0, 15),
+    paid: isPaid
+  }));
 
   if (!isPaid) {
     const rl = rateCheck(ip);
@@ -114,7 +126,6 @@ function handleOG(req, res) {
   }
 
   try {
-    const opts = parseOpts(req.method === 'POST' ? req.body : req.query);
     const png = generateImage(opts);
     trackUsage(isPaid ? 'paid' : 'free');
     res.setHeader('Content-Type', 'image/png');
