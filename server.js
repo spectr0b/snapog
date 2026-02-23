@@ -15,6 +15,7 @@ const DATA_DIR = path.join(__dirname, 'data');
 const KEYS_FILE = path.join(DATA_DIR, 'api-keys.json');
 const WAITLIST_FILE = path.join(DATA_DIR, 'waitlist.json');
 const STATS_FILE = path.join(DATA_DIR, 'stats.json');
+const ANALYTICS_FILE = path.join(DATA_DIR, 'analytics.json');
 
 // Ensure data dir exists
 if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
@@ -58,6 +59,50 @@ function trackUsage(type) {
   writeJSON(STATS_FILE, stats);
 }
 
+// Detailed analytics tracking
+function logAnalytics(data) {
+  const analytics = readJSON(ANALYTICS_FILE, { requests: [], summary: {} });
+  
+  // Add request
+  analytics.requests.push({
+    ts: data.ts,
+    title: data.title,
+    theme: data.theme,
+    site: data.site,
+    referrer: data.referrer,
+    ua: data.ua,
+    ip: data.ip,
+    paid: data.paid
+  });
+  
+  // Keep only last 1000 requests to prevent file bloat
+  if (analytics.requests.length > 1000) {
+    analytics.requests = analytics.requests.slice(-1000);
+  }
+  
+  // Update summary stats
+  const sum = analytics.summary;
+  sum.totalRequests = (sum.totalRequests || 0) + 1;
+  sum.paidRequests = (sum.paidRequests || 0) + (data.paid ? 1 : 0);
+  sum.freeRequests = (sum.freeRequests || 0) + (data.paid ? 0 : 1);
+  sum.lastRequest = data.ts;
+  
+  // Track unique IPs
+  sum.uniqueIPs = sum.uniqueIPs || {};
+  sum.uniqueIPs[data.ip] = (sum.uniqueIPs[data.ip] || 0) + 1;
+  
+  // Track themes
+  sum.themeUsage = sum.themeUsage || {};
+  sum.themeUsage[data.theme] = (sum.themeUsage[data.theme] || 0) + 1;
+  
+  // Track referrers
+  sum.referrers = sum.referrers || {};
+  const refKey = data.referrer === 'direct' ? 'direct' : new URL(data.referrer.startsWith('http') ? data.referrer : `http://${data.referrer}`).hostname || 'unknown';
+  sum.referrers[refKey] = (sum.referrers[refKey] || 0) + 1;
+  
+  writeJSON(ANALYTICS_FILE, analytics);
+}
+
 // Middleware
 app.use(express.json({ limit: '1mb' }));
 app.use((req, res, next) => {
@@ -84,6 +129,230 @@ app.get('/health', (req, res) => {
   });
 });
 
+// ── Stats Dashboard ──────────────────────────────────────────────────────────
+
+app.get('/stats', (req, res) => {
+  const analytics = readJSON(ANALYTICS_FILE, { requests: [], summary: {} });
+  const keys = readJSON(KEYS_FILE, {});
+  
+  const summary = analytics.summary || {};
+  const recentRequests = analytics.requests.slice(-50).reverse(); // Last 50 requests
+  
+  // Calculate top stats
+  const topThemes = Object.entries(summary.themeUsage || {})
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5)
+    .map(([theme, count]) => ({ theme, count }));
+  
+  const topReferrers = Object.entries(summary.referrers || {})
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 10)
+    .map(([referrer, count]) => ({ referrer, count }));
+  
+  const uniqueIPCount = Object.keys(summary.uniqueIPs || {}).length;
+  
+  res.json({
+    summary: {
+      totalRequests: summary.totalRequests || 0,
+      paidRequests: summary.paidRequests || 0,
+      freeRequests: summary.freeRequests || 0,
+      uniqueUsers: uniqueIPCount,
+      paidUsers: Object.keys(keys).length,
+      lastRequest: summary.lastRequest || null
+    },
+    topThemes,
+    topReferrers,
+    recentRequests: recentRequests.map(r => ({
+      timestamp: r.ts,
+      title: r.title,
+      theme: r.theme,
+      site: r.site,
+      referrer: r.referrer,
+      paid: r.paid
+    }))
+  });
+});
+
+app.get('/stats/dashboard', (req, res) => {
+  res.send(`<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>SnapOG Stats</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { 
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #0f0f13;
+      color: #f1f5f9;
+      padding: 2rem;
+      line-height: 1.6;
+    }
+    .container { max-width: 1200px; margin: 0 auto; }
+    h1 { margin-bottom: 0.5rem; color: #6366f1; }
+    .subtitle { color: #94a3b8; margin-bottom: 2rem; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 2rem; }
+    .card { 
+      background: #16161f;
+      border: 1px solid #1e1e2e;
+      border-radius: 8px;
+      padding: 1.5rem;
+    }
+    .card h3 { color: #94a3b8; font-size: 0.875rem; font-weight: 500; margin-bottom: 0.5rem; }
+    .card .value { font-size: 2rem; font-weight: 700; color: #f1f5f9; }
+    .card .label { font-size: 0.75rem; color: #64748b; margin-top: 0.25rem; }
+    .section { margin-bottom: 2rem; }
+    .section h2 { margin-bottom: 1rem; font-size: 1.25rem; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { 
+      text-align: left;
+      padding: 0.75rem;
+      border-bottom: 1px solid #1e1e2e;
+    }
+    th { color: #94a3b8; font-weight: 500; font-size: 0.875rem; }
+    td { color: #f1f5f9; }
+    .paid { color: #10b981; }
+    .free { color: #6366f1; }
+    .refresh { 
+      background: #6366f1;
+      color: white;
+      border: none;
+      padding: 0.5rem 1rem;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.875rem;
+      margin-bottom: 1rem;
+    }
+    .refresh:hover { background: #4f46e5; }
+    code { 
+      background: #1e1e2e;
+      padding: 0.125rem 0.375rem;
+      border-radius: 4px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.875rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>📊 SnapOG Analytics</h1>
+    <p class="subtitle">Real-time usage statistics</p>
+    
+    <button class="refresh" onclick="location.reload()">🔄 Refresh</button>
+    
+    <div id="stats">Loading...</div>
+  </div>
+  
+  <script>
+    async function loadStats() {
+      try {
+        const res = await fetch('/stats');
+        const data = await res.json();
+        
+        const html = \`
+          <div class="grid">
+            <div class="card">
+              <h3>Total Requests</h3>
+              <div class="value">\${data.summary.totalRequests.toLocaleString()}</div>
+            </div>
+            <div class="card">
+              <h3>Unique Users</h3>
+              <div class="value">\${data.summary.uniqueUsers.toLocaleString()}</div>
+              <div class="label">Unique IPs</div>
+            </div>
+            <div class="card">
+              <h3>Paid Users</h3>
+              <div class="value">\${data.summary.paidUsers}</div>
+              <div class="label">\${data.summary.paidRequests} paid requests</div>
+            </div>
+            <div class="card">
+              <h3>Free Tier</h3>
+              <div class="value">\${data.summary.freeRequests.toLocaleString()}</div>
+              <div class="label">Free requests</div>
+            </div>
+          </div>
+          
+          <div class="section">
+            <h2>🎨 Top Themes</h2>
+            <table>
+              <thead>
+                <tr>
+                  <th>Theme</th>
+                  <th>Requests</th>
+                </tr>
+              </thead>
+              <tbody>
+                \${data.topThemes.map(t => \`
+                  <tr>
+                    <td><code>\${t.theme}</code></td>
+                    <td>\${t.count.toLocaleString()}</td>
+                  </tr>
+                \`).join('')}
+              </tbody>
+            </table>
+          </div>
+          
+          <div class="section">
+            <h2>🔗 Traffic Sources</h2>
+            <table>
+              <thead>
+                <tr>
+                  <th>Referrer</th>
+                  <th>Requests</th>
+                </tr>
+              </thead>
+              <tbody>
+                \${data.topReferrers.map(r => \`
+                  <tr>
+                    <td>\${r.referrer === 'direct' ? '<em>Direct</em>' : r.referrer}</td>
+                    <td>\${r.count.toLocaleString()}</td>
+                  </tr>
+                \`).join('')}
+              </tbody>
+            </table>
+          </div>
+          
+          <div class="section">
+            <h2>📝 Recent Requests (Last 50)</h2>
+            <table>
+              <thead>
+                <tr>
+                  <th>Time</th>
+                  <th>Title</th>
+                  <th>Theme</th>
+                  <th>Referrer</th>
+                  <th>Tier</th>
+                </tr>
+              </thead>
+              <tbody>
+                \${data.recentRequests.map(r => \`
+                  <tr>
+                    <td>\${new Date(r.timestamp).toLocaleString()}</td>
+                    <td>\${r.title}</td>
+                    <td><code>\${r.theme}</code></td>
+                    <td>\${r.referrer === 'direct' ? '<em>direct</em>' : r.referrer}</td>
+                    <td class="\${r.paid ? 'paid' : 'free'}">\${r.paid ? '💰 Paid' : '🆓 Free'}</td>
+                  </tr>
+                \`).join('')}
+              </tbody>
+            </table>
+          </div>
+        \`;
+        
+        document.getElementById('stats').innerHTML = html;
+      } catch (err) {
+        document.getElementById('stats').innerHTML = '<p>Error loading stats: ' + err.message + '</p>';
+      }
+    }
+    
+    loadStats();
+    setInterval(loadStats, 30000); // Auto-refresh every 30s
+  </script>
+</body>
+</html>`);
+});
+
 // ── OG Image generation ─────────────────────────────────────────────────────
 
 function parseOpts(source) {
@@ -102,15 +371,18 @@ function handleOG(req, res) {
   
   // Analytics logging
   const opts = parseOpts(req.method === 'POST' ? req.body : req.query);
-  console.log(JSON.stringify({
+  const analyticsData = {
     ts: new Date().toISOString(),
     title: opts.title?.substring(0, 60),
     theme: opts.theme,
-    ref: req.get('Referer') || req.get('Referrer') || 'direct',
+    site: opts.site,
+    referrer: req.get('Referer') || req.get('Referrer') || 'direct',
     ua: req.get('User-Agent')?.substring(0, 80),
     ip: ip.substring(0, 15),
     paid: isPaid
-  }));
+  };
+  console.log(JSON.stringify(analyticsData));
+  logAnalytics(analyticsData);
 
   if (!isPaid) {
     const rl = rateCheck(ip);
