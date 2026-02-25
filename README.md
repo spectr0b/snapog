@@ -2,7 +2,7 @@
 
 **Beautiful OG images in one line of code. No monthly fees. $49 one-time, use forever.**
 
-[**Try it free →**](http://snapog.46-224-13-144.nip.io/) | [**Buy unlimited access ($49) →**](http://snapog.46-224-13-144.nip.io/buy.html)
+[**Try it free →**](https://snapog.shiplab.xyz/) | [**Buy unlimited access ($49) →**](https://snapog.shiplab.xyz/buy.html)
 
 ## Why SnapOG?
 
@@ -14,7 +14,7 @@ Every OG image service charges $10-20/month. For a simple 1200×630 PNG, that's 
 
 ### Free Tier (No signup)
 ```html
-<meta property="og:image" content="http://snapog.46-224-13-144.nip.io/og?title=Your+Title&theme=dark" />
+<meta property="og:image" content="https://snapog.shiplab.xyz/og?title=Your+Title&theme=dark" />
 ```
 
 That's it. 50 images/hour, completely free, no API key needed.
@@ -22,7 +22,7 @@ That's it. 50 images/hour, completely free, no API key needed.
 ### Unlimited Tier ($49 one-time)
 ```bash
 curl -H "X-Api-Key: sog_your_key" \
-  "http://snapog.46-224-13-144.nip.io/og?title=Your+Title&theme=ocean&desc=Your+description"
+  "https://snapog.shiplab.xyz/og?title=Your+Title&theme=ocean&desc=Your+description"
 ```
 
 Unlimited requests, all themes, priority processing.
@@ -71,7 +71,7 @@ Unlimited requests, all themes, priority processing.
 // app/layout.tsx
 export const metadata = {
   openGraph: {
-    images: [`http://snapog.46-224-13-144.nip.io/og?title=${title}&theme=ocean`],
+    images: [`https://snapog.shiplab.xyz/og?title=${title}&theme=ocean`],
   },
 };
 ```
@@ -79,7 +79,7 @@ export const metadata = {
 ### Astro
 ```astro
 ---
-const ogImage = `http://snapog.46-224-13-144.nip.io/og?title=${Astro.props.title}&theme=dark`;
+const ogImage = `https://snapog.shiplab.xyz/og?title=${Astro.props.title}&theme=dark`;
 ---
 <meta property="og:image" content={ogImage} />
 ```
@@ -89,14 +89,14 @@ const ogImage = `http://snapog.46-224-13-144.nip.io/og?title=${Astro.props.title
 export const meta = () => [
   {
     property: "og:image",
-    content: `http://snapog.46-224-13-144.nip.io/og?title=${title}&theme=sunset`,
+    content: `https://snapog.shiplab.xyz/og?title=${title}&theme=sunset`,
   },
 ];
 ```
 
 ### Plain HTML
 ```html
-<meta property="og:image" content="http://snapog.46-224-13-144.nip.io/og?title=My+Blog+Post&theme=minimal" />
+<meta property="og:image" content="https://snapog.shiplab.xyz/og?title=My+Blog+Post&theme=minimal" />
 ```
 
 ## Pricing
@@ -108,7 +108,7 @@ export const meta = () => [
 
 **No subscriptions. No hidden fees. Pay once, use forever.**
 
-[**Get unlimited access →**](http://snapog.46-224-13-144.nip.io/buy.html)
+[**Get unlimited access →**](https://snapog.shiplab.xyz/buy.html)
 
 ## Why One-Time Payment?
 
@@ -146,7 +146,7 @@ A: 30-day money-back guarantee, no questions asked.
 
 - **Issues:** [GitHub Issues](https://github.com/spectr0b/snapog/issues)
 - **Email:** support@snapog.shiplab.xyz
-- **Docs:** [snapog.shiplab.xyz](http://snapog.46-224-13-144.nip.io/)
+- **Docs:** [snapog.shiplab.xyz](https://snapog.shiplab.xyz/)
 
 ## License
 
@@ -156,4 +156,4 @@ MIT — do whatever you want with it.
 
 **Built by developers, for developers. No BS. No monthly fees. Just $49 once.**
 
-[**Try free →**](http://snapog.46-224-13-144.nip.io/) | [**Buy unlimited ($49) →**](http://snapog.46-224-13-144.nip.io/buy.html)
+[**Try free →**](https://snapog.shiplab.xyz/) | [**Buy unlimited ($49) →**](https://snapog.shiplab.xyz/buy.html)
